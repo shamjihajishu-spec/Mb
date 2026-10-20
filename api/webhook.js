@@ -1,17 +1,17 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { GoogleGenAI } = require("@google/genai");
 const axios = require('axios');
 const express = require('express');
 
 // আপনার সিস্টেম প্রম্পট বা বিজনেসের নিয়ম
 const SYSTEM_PROMPT = "You are a helpful customer support assistant for Glama.";
 
-// Gemini API ইনিশিয়ালাইজেশন
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Gemini API ইনিশিয়ালাইজেশন (New SDK)
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const app = express();
 app.use(express.json());
 
-// 1. Webhook Verification (GET) - ডিবাগিং ও মেটা ভেরিফিকেশনের জন্য
+// 1. Webhook Verification (GET) - মেটা ভেরিফিকেশনের জন্য
 app.get('/api/webhook', (req, res) => {
   const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 
@@ -22,7 +22,6 @@ app.get('/api/webhook', (req, res) => {
   console.log("GET Webhook Hit Received!");
   console.log("Mode:", mode);
   console.log("Token received from Meta:", token);
-  console.log("Token expected in Vercel:", VERIFY_TOKEN);
 
   if (mode && token) {
     if (mode === 'subscribe' && token === VERIFY_TOKEN) {
@@ -66,15 +65,17 @@ app.post('/api/webhook', async (req, res) => {
   }
 });
 
-// Gemini API Call Function
+// Gemini API Call Function (New GoogleGenAI Syntax)
 async function getGeminiReply(userMessage) {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    const prompt = `${SYSTEM_PROMPT}\n\nCustomer Message: "${userMessage}"\nReply:`;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
+    const response = await ai.models.generateContent({
+      model: 'gemini-1.5-flash',
+      contents: [
+        { role: 'user', parts: [{ text: `${SYSTEM_PROMPT}\n\nCustomer Message: "${userMessage}"` }] }
+      ]
+    });
+    
+    return response.text;
   } catch (error) {
     console.error('Gemini API Error:', error);
     return 'ধন্যবাদ আপনার মেসেজের জন্য। আমাদের প্রতিনিধি খুব দ্রুতই আপনার সাথে যোগাযোগ করবে।';
