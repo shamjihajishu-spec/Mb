@@ -1,18 +1,17 @@
-const { GoogleGenAI } = require('@google/genai'); // অথবা আপনার জেমিনাই লাইব্রেরি রিকোয়ারমেন্ট
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const axios = require('axios');
+const express = require('express');
 
 // আপনার সিস্টেম প্রম্পট বা বিজনেসের নিয়ম
 const SYSTEM_PROMPT = "You are a helpful customer support assistant for Glama.";
 
-// Note: যদি @google/generative-ai ব্যবহার করে থাকেন:
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+// Gemini API ইনিশিয়ালাইজেশন
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-const express = require('express');
 const app = express();
 app.use(express.json());
 
-// 1. Webhook Verification (GET) - এটি মেটা ভেরিফিকেশনের জন্য আবশ্যিক!
+// 1. Webhook Verification (GET) - ডিবাগিং ও মেটা ভেরিফিকেশনের জন্য
 app.get('/api/webhook', (req, res) => {
   const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 
@@ -20,15 +19,22 @@ app.get('/api/webhook', (req, res) => {
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
+  console.log("GET Webhook Hit Received!");
+  console.log("Mode:", mode);
+  console.log("Token received from Meta:", token);
+  console.log("Token expected in Vercel:", VERIFY_TOKEN);
+
   if (mode && token) {
     if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-      console.log('WEBHOOK_VERIFIED');
-      res.status(200).send(challenge);
+      console.log('WEBHOOK_VERIFIED Successfully');
+      return res.status(200).send(challenge);
     } else {
-      res.sendStatus(403);
+      console.log('Token mismatch!');
+      return res.status(403).send('Forbidden: Token mismatch');
     }
   } else {
-    res.sendStatus(400);
+    console.log('Missing mode or token!');
+    return res.status(400).send('Bad Request: Missing parameters');
   }
 });
 
